@@ -10,14 +10,197 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+generator Prisma_Code_Generator {
+  provider = "prisma-code-generator"
+  output   = "../gen"
+}
+
+// ################################################################################################
+
+model Client {
+  // Defaults to all models
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Dados do cliente
+  name  String  @unique
+  cnpj  String  @unique
+  email String  @unique
+  logo  String?
+
+  // Relação de Muitos para Um com POPs
+  POP POP[]
+
+  // Relação de Muitos para Um com User
+  user User[]
+
+  Proxy Proxy[]
+  @@map("clients")
+}
+
+// ################################################################################################
+model User {
+  // Defaults to all models
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dados de autenticação
   email    String  @unique
   hash     String
   hashedRt String?
 
+  // Dados do usuário
+  firstName String
+  lastName  String
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  country   String?
+  birthDate DateTime?
+  avatar    String?   @default("/images/avatar_default.png")
+
+  // Role padrão é User
+  role String @default("user")
+
+  // Relação com o Model Cliente
+  Client   Client? @relation(fields: [clientId], references: [id])
+  clientId Int?
+
   @@map("users")
+}
+
+// ################################################################################################
+model POP {
+  // Defaults to all models
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relação de 1:1 com Client
+  clientId Int
+  client   Client @relation(fields: [clientId], references: [id])
+
+  // Dados do POP
+  title   String
+  address String?
+  city    String?
+  state   String?
+  zip     String?
+  country String?
+  lat     Float?
+  lng     Float?
+  image   String?
+
+  // Relação de 1 para muitos com o model Rack
+  Rack Rack[]
+
+  @@map("pops")
+}
+
+// ################################################################################################
+model Rack {
+  // Defaults to all models
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relação de 1:1 com POP
+  popId Int
+  pop   POP @relation(fields: [popId], references: [id])
+
+
+  // Dados do Rack
+  title           String
+  identifierLabel String? @default(uuid())
+  maxPositions    Int?
+  maxPower        Int?
+
+  // Relação de 1 para muitos com o model Device
+  Device Device[]
+
+  @@map("racks")
+}
+
+// ################################################################################################
+
+model Device {
+  // Default for all models
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dados do Device
+  title     String @unique
+  model     String
+  function  String
+  vendor    String
+  ipaddress String @unique
+
+  rackId          Int?
+  powerConsuption Int?
+
+  // Relação com o Rack
+  rackPosition Int?
+  rack         Rack? @relation(fields: [rackId], references: [id])
+
+  // Relação com o Profile de autenticação
+  accessProfileId Int?
+  accessProfile   AccessProfile? @relation(fields: [accessProfileId], references: [id])
+
+  // Relação com um determinado Proxy
+  Proxy   Proxy? @relation(fields: [proxyId], references: [id])
+  proxyId Int?
+
+  @@map("devices")
+}
+
+// ################################################################################################
+model AccessProfile {
+  // Default for all models
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dados do AccessProfile
+  username String  @unique
+  password String
+  port     Int?
+  service  String?
+  protocol String?
+
+
+  // Relação com muitos devices
+  Device Device[]
+
+  @@map("access_profiles")
+}
+
+// ################################################################################################
+model Proxy {
+  // Default for all models
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dados do Proxy
+  title         String
+  name          String
+  localAddress  String
+  serverAddress String
+  serverPort    Int
+  token         String?
+  subDomain     String?
+
+  // Relação com muitos devices
+  Device Device[]
+
+  // Relação com um cliente
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId Int
+
+  @@map("proxies")
 }
